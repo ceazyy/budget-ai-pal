@@ -1,8 +1,8 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Dashboard from '@/components/Dashboard';
 import TransactionForm from '@/components/TransactionForm';
+import IncomeForm from '@/components/IncomeForm';
 import TransactionList from '@/components/TransactionList';
 import ExpenseChart from '@/components/ExpenseChart';
 import SavingsGoal from '@/components/SavingsGoal';
@@ -43,7 +43,6 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
-  // Calculate financial summary from transactions
   const getFinancialSummary = (transactions: Transaction[]): FinancialSummary => {
     const totalIncome = transactions
       .filter(t => t.amount > 0)
@@ -53,7 +52,6 @@ const Index = () => {
       .filter(t => t.amount < 0)
       .reduce((sum, t) => sum + Math.abs(t.amount), 0);
     
-    // Group expenses by category
     const expensesByCategory = transactions
       .filter(t => t.amount < 0)
       .reduce((acc, t) => {
@@ -63,7 +61,6 @@ const Index = () => {
         return acc;
       }, {} as Record<string, number>);
     
-    // Find top expense category
     let topCategory = { name: 'other' as TransactionCategory, amount: 0 };
     
     Object.entries(expensesByCategory).forEach(([category, amount]) => {
@@ -100,13 +97,13 @@ const Index = () => {
       
       if (error) throw error;
       
-      // No need to manually update transactions as React Query will refetch
+      toast.success('Transaction added successfully!');
     } catch (error) {
       console.error("Error adding transaction:", error);
+      toast.error('Failed to add transaction');
     }
   };
 
-  // Mock data for components that don't yet pull from Supabase
   const mockBudgetAlerts: BudgetAlert[] = [
     {
       id: '1',
@@ -174,20 +171,17 @@ const Index = () => {
           </div>
         </header>
 
-        {/* Dashboard Summary */}
         <section className="mb-8">
           <Dashboard summary={financialSummary} />
         </section>
         
-        {/* Main Content */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column */}
           <div className="space-y-8">
+            <IncomeForm onAddIncome={handleAddTransaction} />
             <TransactionForm onAddTransaction={handleAddTransaction} />
             <AlertPanel alerts={mockBudgetAlerts} />
           </div>
           
-          {/* Middle and Right columns */}
           <div className="lg:col-span-2 space-y-8">
             <ExpenseChart forecastData={mockForecastData} />
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
