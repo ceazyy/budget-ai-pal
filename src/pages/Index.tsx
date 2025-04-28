@@ -7,20 +7,33 @@ import TransactionList from '@/components/TransactionList';
 import ExpenseChart from '@/components/ExpenseChart';
 import SavingsGoal from '@/components/SavingsGoal';
 import AlertPanel from '@/components/AlertPanel';
-import { 
-  mockTransactions, 
-  mockForecastData, 
-  mockSavingsRecommendation, 
-  mockBudgetAlerts,
-  getFinancialSummary
-} from '@/lib/mockData';
-import { Transaction, TransactionCategory } from '@/types/finance';
+import { supabase } from '@/integrations/supabase/client';
+import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Transaction } from '@/types/finance';
 
 const Index = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>(mockTransactions);
+  const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Simulate loading state
+  const { data: transactions = [] } = useQuery({
+    queryKey: ['transactions'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('transactions')
+        .select('*')
+        .order('date', { ascending: false });
+
+      if (error) throw error;
+      return data as Transaction[];
+    },
+  });
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate('/auth');
+  };
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -64,8 +77,11 @@ const Index = () => {
               <h1 className="text-3xl font-bold text-gray-900">Financial Dashboard</h1>
               <p className="mt-1 text-gray-500">Your collaborative personal finance manager</p>
             </div>
-            <div className="mt-4 sm:mt-0">
+            <div className="mt-4 sm:mt-0 flex space-x-4">
               <Button className="bg-primary text-white">Sync Accounts</Button>
+              <Button variant="outline" onClick={handleSignOut}>
+                Sign Out
+              </Button>
             </div>
           </div>
         </header>
