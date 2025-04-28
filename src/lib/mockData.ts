@@ -1,4 +1,3 @@
-
 import { Transaction, ForecastData, SavingsRecommendation, BudgetAlert } from '@/types/finance';
 
 // Generate a random ID
@@ -139,12 +138,14 @@ export const getFinancialSummary = (transactions: Transaction[]) => {
       return acc;
     }, {} as Record<string, number>);
   
-  // Find top expense category, make sure it's a valid expense category
-  let topCategory = { name: 'other' as const, amount: 0 };
+  // Find top expense category
+  const expenseCategories = ['housing', 'food', 'transport', 'utilities', 'entertainment', 'savings', 'other'] as const;
+  let topCategory = { name: 'other' as typeof expenseCategories[number], amount: 0 };
+  
   Object.entries(expensesByCategory).forEach(([category, amount]) => {
     if (amount > topCategory.amount && category !== 'income') {
       topCategory = { 
-        name: category as Exclude<Transaction['category'], 'income'>, 
+        name: category as typeof expenseCategories[number],
         amount 
       };
     }
