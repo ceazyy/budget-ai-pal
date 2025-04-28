@@ -10,11 +10,13 @@ import AlertPanel from '@/components/AlertPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Transaction } from '@/types/finance';
+import { Transaction, TransactionCategory, FinancialSummary, BudgetAlert, ForecastData, SavingsRecommendation } from '@/types/finance';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Index = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
+  const { user } = useAuth();
 
   const { data: transactions = [] } = useQuery({
     queryKey: ['transactions'],
@@ -41,20 +43,106 @@ const Index = () => {
     return () => clearTimeout(timer);
   }, []);
 
+  // Calculate financial summary from transactions
+  const getFinancialSummary = (transactions: Transaction[]): FinancialSummary => {
+    const totalIncome = transactions
+      .filter(t => t.amount > 0)
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const totalExpenses = transactions
+      .filter(t => t.amount < 0)
+      .reduce((sum, t) => sum + Math.abs(t.amount), 0);
+    
+    // Group expenses by category
+    const expensesByCategory = transactions
+      .filter(t => t.amount < 0)
+      .reduce((acc, t) => {
+        const category = t.category;
+        if (!acc[category]) acc[category] = 0;
+        acc[category] += Math.abs(t.amount);
+        return acc;
+      }, {} as Record<string, number>);
+    
+    // Find top expense category
+    let topCategory = { name: 'other' as TransactionCategory, amount: 0 };
+    
+    Object.entries(expensesByCategory).forEach(([category, amount]) => {
+      if (amount > topCategory.amount && category !== 'income') {
+        topCategory = { 
+          name: category as TransactionCategory,
+          amount 
+        };
+      }
+    });
+
+    return {
+      totalIncome,
+      totalExpenses,
+      netSavings: totalIncome - totalExpenses,
+      topCategory
+    };
+  };
+
   const financialSummary = getFinancialSummary(transactions);
 
-  const handleAddTransaction = (transactionData: {
+  const handleAddTransaction = async (transactionData: {
     description: string;
     amount: number;
     category: TransactionCategory;
   }) => {
-    const newTransaction: Transaction = {
-      id: Math.random().toString(36).substring(2, 9),
-      date: new Date().toISOString().split('T')[0],
-      ...transactionData,
-    };
+    if (!user) return;
+    
+    try {
+      const { error } = await supabase.from('transactions').insert({
+        user_id: user.id,
+        ...transactionData
+      });
+      
+      if (error) throw error;
+      
+      // No need to manually update transactions as React Query will refetch
+    } catch (error) {
+      console.error("Error adding transaction:", error);
+    }
+  };
 
-    setTransactions([...transactions, newTransaction]);
+  // Mock data for components that don't yet pull from Supabase
+  const mockBudgetAlerts: BudgetAlert[] = [
+    {
+      id: '1',
+      category: 'food',
+      message: 'You have spent 80% of your food budget',
+      threshold: 200,
+      currentSpending: 164,
+      severity: 'medium'
+    },
+    {
+      id: '2',
+      category: 'entertainment',
+      message: 'You have almost reached your entertainment budget',
+      threshold: 50,
+      currentSpending: 44.49,
+      severity: 'high'
+    }
+  ];
+  
+  const mockForecastData: ForecastData[] = [
+    { category: 'food', predicted: 320, actual: 164 },
+    { category: 'housing', predicted: 1200, actual: 1200 },
+    { category: 'transport', predicted: 100, actual: 70.3 },
+    { category: 'utilities', predicted: 130, actual: 101.22 },
+    { category: 'entertainment', predicted: 150, actual: 44.49 },
+    { category: 'other', predicted: 200, actual: 0 }
+  ];
+  
+  const mockSavingsRecommendation: SavingsRecommendation = {
+    goal: 500,
+    currentSavings: 300,
+    tips: [
+      'Reduce eating out to save an additional $50',
+      'Consider a cheaper entertainment subscription',
+      'Try carpooling to save on transportation'
+    ]
   };
 
   if (isLoading) {
