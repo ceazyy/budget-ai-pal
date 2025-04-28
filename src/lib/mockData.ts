@@ -139,12 +139,12 @@ export const getFinancialSummary = (transactions: Transaction[]) => {
       return acc;
     }, {} as Record<string, number>);
   
-  // Find top expense category
+  // Find top expense category, make sure it's a valid expense category
   let topCategory = { name: 'other' as const, amount: 0 };
   Object.entries(expensesByCategory).forEach(([category, amount]) => {
     if (amount > topCategory.amount && category !== 'income') {
       topCategory = { 
-        name: category as Transaction['category'], 
+        name: category as Exclude<Transaction['category'], 'income'>, 
         amount 
       };
     }

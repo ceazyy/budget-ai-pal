@@ -29,6 +29,14 @@ const AlertPanel = ({ alerts }: AlertPanelProps) => {
         {alerts.map((alert) => {
           const percentage = Math.round((alert.currentSpending / alert.threshold) * 100);
           
+          // Determine progress bar color based on severity
+          const progressBarColor = 
+            alert.severity === 'high' 
+              ? 'bg-finance-expense' 
+              : alert.severity === 'medium' 
+                ? 'bg-finance-utilities' 
+                : 'bg-finance-other';
+          
           return (
             <div key={alert.id} className="border-l-4 pl-4 py-1 bg-gray-50 rounded" 
               style={{ 
@@ -57,14 +65,7 @@ const AlertPanel = ({ alerts }: AlertPanelProps) => {
                     </div>
                     <Progress 
                       value={percentage} 
-                      className="h-1.5" 
-                      indicatorClassName={
-                        alert.severity === 'high' 
-                          ? 'bg-finance-expense' 
-                          : alert.severity === 'medium' 
-                            ? 'bg-finance-utilities' 
-                            : 'bg-finance-other'
-                      }
+                      className={`h-1.5 ${progressBarColor}`} 
                     />
                   </div>
                   <p className="text-xs text-gray-500">Category: {alert.category}</p>
