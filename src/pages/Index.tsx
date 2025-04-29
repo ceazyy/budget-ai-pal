@@ -5,8 +5,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { useTransactions } from '@/hooks/useTransactions';
+import { useBudgetAlerts } from '@/hooks/useBudgetAlerts';
 import { getFinancialSummary } from '@/utils/financeCalculations';
-import { getMockBudgetAlerts, getMockForecastData, getMockSavingsRecommendation } from '@/utils/mockData';
+import { getMockForecastData, getMockSavingsRecommendation } from '@/utils/mockData';
 import { useAuth } from '@/contexts/AuthContext';
 import PageHeader from '@/components/PageHeader';
 import FinanceLayout from '@/components/FinanceLayout';
@@ -25,6 +26,14 @@ const Index = () => {
     error: transactionsError,
     refetch 
   } = useTransactions();
+  
+  const {
+    alerts,
+    isLoading: isLoadingAlerts,
+    error: alertsError,
+    refetch: refetchAlerts,
+    deleteAlert
+  } = useBudgetAlerts();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -44,6 +53,13 @@ const Index = () => {
       console.error('Error loading transactions:', transactionsError);
     }
   }, [transactionsError]);
+  
+  useEffect(() => {
+    if (alertsError) {
+      toast.error('Failed to load budget alerts');
+      console.error('Error loading budget alerts:', alertsError);
+    }
+  }, [alertsError]);
 
   const handleAddTransaction = async (transactionData: {
     description: string;
@@ -70,6 +86,9 @@ const Index = () => {
       // Refresh transactions data
       queryClient.invalidateQueries({ queryKey: ['transactions'] });
       
+      // Also refresh budget alerts after a new transaction
+      queryClient.invalidateQueries({ queryKey: ['budgetAlerts'] });
+      
       toast.success('Transaction added successfully!');
     } catch (error) {
       console.error("Error adding transaction:", error);
@@ -78,7 +97,6 @@ const Index = () => {
   };
 
   // Mock data for components that aren't yet connected to Supabase
-  const mockBudgetAlerts = getMockBudgetAlerts();
   const mockForecastData = getMockForecastData();
   const mockSavingsRecommendation = getMockSavingsRecommendation();
 
@@ -95,6 +113,11 @@ const Index = () => {
     return <ErrorState onRetry={() => refetch()} />;
   }
 
+  const handleRefreshAll = () => {
+    refetch();
+    refetchAlerts();
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
@@ -103,10 +126,13 @@ const Index = () => {
         <FinanceLayout
           financialSummary={financialSummary}
           transactions={transactions}
-          alerts={mockBudgetAlerts}
+          alerts={alerts}
           forecastData={mockForecastData}
           savingsRecommendation={mockSavingsRecommendation}
           onAddTransaction={handleAddTransaction}
+          isLoadingAlerts={isLoadingAlerts}
+          onDeleteAlert={deleteAlert}
+          onBudgetAdded={refetchAlerts}
         />
       </div>
     </div>

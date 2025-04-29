@@ -1,22 +1,37 @@
 
 import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 import { BudgetAlert } from '@/types/finance';
-import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Info, Trash2 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { formatCurrency } from '@/lib/utils';
 
 interface AlertPanelProps {
   alerts: BudgetAlert[];
+  onDeleteAlert?: (alertId: string) => Promise<void>;
+  isLoading?: boolean;
 }
 
-const AlertPanel = ({ alerts }: AlertPanelProps) => {
+const AlertPanel = ({ alerts, onDeleteAlert, isLoading = false }: AlertPanelProps) => {
+  if (isLoading) {
+    return (
+      <Card className="finance-card">
+        <h2 className="text-lg font-medium mb-4">Budget Alerts</h2>
+        <div className="flex items-center justify-center p-4">
+          <div className="w-6 h-6 border-2 border-t-primary rounded-full animate-spin mr-2"></div>
+          <p>Loading alerts...</p>
+        </div>
+      </Card>
+    );
+  }
+
   if (alerts.length === 0) {
     return (
       <Card className="finance-card">
         <h2 className="text-lg font-medium mb-4">Budget Alerts</h2>
         <div className="flex items-center justify-center p-4 text-muted-foreground">
           <Info className="mr-2 h-5 w-5" />
-          <p>No active alerts</p>
+          <p>No active alerts. Set budget limits to see alerts here.</p>
         </div>
       </Card>
     );
@@ -38,7 +53,7 @@ const AlertPanel = ({ alerts }: AlertPanelProps) => {
                 : 'bg-finance-other';
           
           return (
-            <div key={alert.id} className="border-l-4 pl-4 py-1 bg-gray-50 rounded" 
+            <div key={alert.id} className="border-l-4 pl-4 py-1 bg-gray-50 rounded flex flex-col" 
               style={{ 
                 borderLeftColor: 
                   alert.severity === 'high' 
@@ -68,7 +83,19 @@ const AlertPanel = ({ alerts }: AlertPanelProps) => {
                       className={`h-1.5 ${progressBarColor}`} 
                     />
                   </div>
-                  <p className="text-xs text-gray-500">Category: {alert.category}</p>
+                  <div className="flex justify-between items-center">
+                    <p className="text-xs text-gray-500 capitalize">Category: {alert.category}</p>
+                    {onDeleteAlert && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => onDeleteAlert(alert.id)}
+                        className="h-7 px-2 text-gray-500 hover:text-finance-expense"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
