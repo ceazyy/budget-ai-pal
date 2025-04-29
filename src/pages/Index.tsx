@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Dashboard from '@/components/Dashboard';
@@ -10,7 +9,7 @@ import SavingsGoal from '@/components/SavingsGoal';
 import AlertPanel from '@/components/AlertPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import { Transaction, TransactionCategory, FinancialSummary, BudgetAlert, ForecastData, SavingsRecommendation } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,18 +18,28 @@ const Index = () => {
   const navigate = useNavigate();
   const [isLoading, setIsLoading] = useState(true);
   const { user } = useAuth();
+  const queryClient = useQueryClient();
 
-  const { data: transactions = [] } = useQuery({
+  // Query for transactions with better error handling and loading states
+  const { 
+    data: transactions = [], 
+    isLoading: isLoadingTransactions, 
+    error: transactionsError 
+  } = useQuery({
     queryKey: ['transactions'],
     queryFn: async () => {
+      if (!user) return [];
+      
       const { data, error } = await supabase
         .from('transactions')
         .select('*')
+        .eq('user_id', user.id)
         .order('date', { ascending: false });
 
       if (error) throw error;
       return data as Transaction[];
     },
+    enabled: !!user, // Only run query if user is logged in
   });
 
   const handleSignOut = async () => {
@@ -44,6 +53,14 @@ const Index = () => {
     }, 1000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Show error message if transactions query failed
+  useEffect(() => {
+    if (transactionsError) {
+      toast.error('Failed to load transactions');
+      console.error('Error loading transactions:', transactionsError);
+    }
+  }, [transactionsError]);
 
   const getFinancialSummary = (transactions: Transaction[]): FinancialSummary => {
     const totalIncome = transactions
@@ -89,15 +106,25 @@ const Index = () => {
     amount: number;
     category: TransactionCategory;
   }) => {
-    if (!user) return;
+    if (!user) {
+      toast.error('You must be logged in to add transactions');
+      return;
+    }
     
     try {
-      const { error } = await supabase.from('transactions').insert({
+      // Prepare transaction data with current date and user ID
+      const newTransaction = {
         user_id: user.id,
+        date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
         ...transactionData
-      });
+      };
+      
+      const { error } = await supabase.from('transactions').insert(newTransaction);
       
       if (error) throw error;
+      
+      // Refresh transactions data
+      queryClient.invalidateQueries({ queryKey: ['transactions'] });
       
       toast.success('Transaction added successfully!');
     } catch (error) {
@@ -106,6 +133,7 @@ const Index = () => {
     }
   };
 
+  // Mock data for components that aren't yet connected to Supabase
   const mockBudgetAlerts: BudgetAlert[] = [
     {
       id: '1',
@@ -144,12 +172,27 @@ const Index = () => {
     ]
   };
 
-  if (isLoading) {
+  // Show loading state while initializing
+  if (isLoading || isLoadingTransactions) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
           <div className="w-12 h-12 border-4 border-t-primary rounded-full mx-auto mb-4 animate-spin"></div>
           <p className="text-lg">Loading your financial dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state if there was an error loading transactions
+  if (transactionsError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-xl text-finance-expense mb-4">Error loading your financial data</p>
+          <Button onClick={() => queryClient.invalidateQueries({ queryKey: ['transactions'] })}>
+            Try Again
+          </Button>
         </div>
       </div>
     );

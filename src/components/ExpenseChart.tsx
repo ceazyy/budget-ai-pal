@@ -33,9 +33,9 @@ const ExpenseChart = ({ forecastData }: ExpenseChartProps) => {
           >
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
-            <YAxis tickFormatter={(value) => `$${value}`} />
+            <YAxis tickFormatter={(value) => `₹${value}`} />
             <Tooltip 
-              formatter={(value) => [`$${value}`, undefined]}
+              formatter={(value) => [formatCurrency(value as number), undefined]}
               labelFormatter={(label) => `Category: ${label}`}
             />
             <Legend />
