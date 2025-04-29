@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import Dashboard from '@/components/Dashboard';
@@ -10,6 +11,7 @@ import AlertPanel from '@/components/AlertPanel';
 import { supabase } from '@/integrations/supabase/client';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
+import { toast } from 'sonner';
 import { Transaction, TransactionCategory, FinancialSummary, BudgetAlert, ForecastData, SavingsRecommendation } from '@/types/finance';
 import { useAuth } from '@/contexts/AuthContext';
 
