@@ -1,5 +1,5 @@
 I'm learning Lovable :)
-
+Update: lovable is meh, I'd rather code manualls :(
 Follow these steps:
 
 ```sh
